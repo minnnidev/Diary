@@ -80,8 +80,16 @@ extension ViewController: WriteDiaryViewDelegate {
     }
 }
 
+//Diary Detail View Controller로 데이터 보내기
 extension ViewController: UICollectionViewDelegate {
-    
+    //특정 셀이 선택됐음을 알림
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let viewController = self.storyboard?.instantiateViewController(withIdentifier: "DiaryDetailViewController") as? DiaryDetailViewController else {return}
+        let diary = self.diaryList[indexPath.row]
+        viewController.diary = diary
+        viewController.indexPath = indexPath
+        self.navigationController?.pushViewController(viewController, animated: true)
+    }
 }
 
 extension ViewController: UICollectionViewDataSource {
@@ -105,3 +113,4 @@ extension ViewController: UICollectionViewDelegateFlowLayout {
         return CGSize(width: (UIScreen.main.bounds.width/2)-20, height: 200)
     }
 }
+
