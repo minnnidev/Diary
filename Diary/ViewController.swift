@@ -14,6 +14,23 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         self.configureCollectionView()
         self.loadDiaryList()
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(editDiaryNotification(_:)),
+            name: NSNotification.Name("editDiary"),
+            object: nil)
+    }
+    
+    @objc func editDiaryNotification(_ notification: Notification) {
+        guard let diary = notification.object as? Diary else {return}
+        guard let row = notification.userInfo?["indexPath.row"] as? Int else {return}
+        self.diaryList[row] = diary
+        //날짜도 최신순으로 수정
+        self.diaryList = self.diaryList.sorted(by: {
+            $0.date.compare($1.date) == .orderedDescending
+        })
+        self.collectionView.reloadData()
     }
     
     private func configureCollectionView() {
@@ -88,6 +105,7 @@ extension ViewController: UICollectionViewDelegate {
         let diary = self.diaryList[indexPath.row]
         viewController.diary = diary
         viewController.indexPath = indexPath
+        viewController.delegate = self //self(viewController)가 viewController(DiaryDetailViewController)의 대리자가 되겠다는 의미
         self.navigationController?.pushViewController(viewController, animated: true)
     }
 }
@@ -114,3 +132,9 @@ extension ViewController: UICollectionViewDelegateFlowLayout {
     }
 }
 
+extension ViewController: DiaryDetailViewDelegate {
+    func didSelectDelete(indexPath: IndexPath) {
+        self.diaryList.remove(at: indexPath.row) //dirayList에서 삭제
+        self.collectionView.deleteItems(at: [indexPath]) //collectionView에서 삭제
+    }
+}

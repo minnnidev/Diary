@@ -7,6 +7,12 @@
 
 import UIKit
 
+//열거형
+enum DiaryEditorMode {
+    case new
+    case edit(IndexPath, Diary)
+}
+
 protocol WriteDiaryViewDelegate: AnyObject {
     func DidSelectRegister(diary: Diary)
 }
@@ -20,17 +26,41 @@ class WriteDiaryViewController: UIViewController {
     private let datePicker = UIDatePicker()
     private var diaryDate: Date? //datePicker에서 선택된 date를 저장해 주는 프로퍼티
     var delegate: WriteDiaryViewDelegate?
+    var diaryEditorMode: DiaryEditorMode = .new
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        configureContentsTextView()
-        configureDatePicker()
-        configureinputField()
+        self.configureContentsTextView()
+        self.configureDatePicker()
+        self.configureinputField()
+        self.configureEditMode() //수정화면을 눌렀을 때 화면 구성
         self.confirmButton.isEnabled = false //처음엔 등록 버튼이 비활성화되도록
     }
     
-    //함수 - 내용 textView 테두리 구현 private으로 하는 이유?
+    //DiaryDetailViewController에서 수정 버튼을 눌렀을 때 받은 열거형 이용
+    private func configureEditMode() {
+            switch self.diaryEditorMode {
+                case let .edit(_, diary):
+                self.titleTextField.text = diary.title
+                self.contentsTextView.text = diary.contents
+                self.dateTextField.text = self.dateToString(date: diary.date)
+                self.diaryDate = diary.date
+                self.confirmButton.title  = "수정"
+            default:
+                break
+        }
+    }
+    
+    //Date->String 함수
+    private func dateToString(date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yy년 MM월 dd일(EEEEE)"
+        formatter.locale = Locale(identifier: "ko_KR")
+        return formatter.string(from: date)
+    }
+    
+    
     private func configureContentsTextView() {
         //red, green, blue 값에는 0.0~1.0 사이 값 넣어줘야 함
         let borderColor = UIColor(red: 220/255, green: 220/255, blue: 220/255, alpha: 1.0)
@@ -42,7 +72,6 @@ class WriteDiaryViewController: UIViewController {
     
     private func configureinputField() {
         self.contentsTextView.delegate = self
-        //이건 그냥 addTarget으로 구현해 보는 건가 싶기도...
         self.titleTextField.addTarget(self, action: #selector(titleTextFieldDidChanged(_:)), for: .editingChanged)
         self.dateTextField.addTarget(self, action: #selector(dateTextFieldDidChanged(_:)), for: .editingChanged)
     }
@@ -61,6 +90,19 @@ class WriteDiaryViewController: UIViewController {
         guard let contents = self.contentsTextView.text else {return}
         guard let date = self.diaryDate else {return}
         let diary = Diary(title: title, contents: contents, date: date, isStar: false)
+        
+        switch self.diaryEditorMode {
+        case .new: //일기를 등록하는 행위
+            self.delegate?.DidSelectRegister(diary: diary)
+        case let .edit(indexPath, _): //일기를 수정하는 행위, notification center 이용
+            NotificationCenter.default.post(
+                name: NSNotification.Name("editDiary"), //알림을 식별하는 태그
+                object: diary, //Noitfication을 통해 전달할 객체
+                userInfo: [ //관련된 값
+                    "indexPath.row": indexPath.row
+                ]
+            )
+        }
         self.delegate?.DidSelectRegister(diary: diary)
         self.navigationController?.popViewController(animated: true) //일기장 화면으로 돌아감 
     }
